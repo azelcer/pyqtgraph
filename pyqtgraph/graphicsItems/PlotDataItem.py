@@ -86,19 +86,21 @@ class PlotDataset:
     Warnings
     --------
     :orphan:
-    .. warning:: 
-        
+    .. warning::
+
         This class is intended for internal use of :class:`~pyqtgraph.PlotDataItem`.
         The interface may change without warning.  It is not considered part of the
         public API.
     """
+
     def __init__(
         self,
         x: np.ndarray,
         y: np.ndarray,
         xAllFinite: bool | None = None,
         yAllFinite: bool | None = None,
-        connect: np.ndarray | None = None
+        connect: np.ndarray | None = None,
+        sortValues: bool = False,
     ):
         super().__init__()
         self.x = x
@@ -112,6 +114,8 @@ class PlotDataset:
             self.xAllFinite = True
         if isinstance(y, np.ndarray) and y.dtype.kind in 'iu':
             self.yAllFinite = True
+        if sortValues:
+            self.sortData()
 
     @property
     def containsNonfinite(self) -> bool | None:
@@ -170,7 +174,7 @@ class PlotDataset:
             The bounding rect of the data in view-space.  Will return ``None`` if there
             is no data or if all `x` and `y` values are ``NaN``.
         """
-        if self._dataRect is None: 
+        if self._dataRect is None:
             self._updateDataRect()
         return self._dataRect
 
@@ -209,6 +213,18 @@ class PlotDataset:
             else:
                 all_y_finite = True
             self.yAllFinite = all_y_finite
+
+    def sortData(self):
+        """Sorts dataset.
+
+        Useful to ensure clipping to view works as expected.
+        """
+        if self.x is None:
+            return
+        sorted_idx = np.argsort(self.x)
+        self.x = self.x[sorted_idx]
+        self.y = self.y[sorted_idx]
+        print("sorted", all(np.sort(self.x) == self.x))
 
 
 class PlotDataItem(GraphicsObject):
@@ -1440,6 +1456,17 @@ class PlotDataItem(GraphicsObject):
         """
         dataset = self._dataset
         return (None, None) if dataset is None else (dataset.x, dataset.y)
+
+    def sortData(self):
+        """Sorts internal dataset.
+
+        Useful to ensure clipping to view works as expected.
+        """
+        if not self._dataset:
+            return
+        self._dataset.sortData()
+        self._datasetDisplay = None  # invalidate display data
+        self.updateItems(styleUpdate=False)
 
     def _getDisplayDataset(self) -> PlotDataset | None:
         """
