@@ -82,6 +82,8 @@ class PlotDataset:
         Array of boolean values indicating if points are connected. This is only
         populated if the PlotDataItem's `connect` argument is set to a numpy array.
         Otherwise, will be None.
+    sortValues : bool, default False
+        Sort the data according to `x` values.
 
     Warnings
     --------
@@ -224,7 +226,6 @@ class PlotDataset:
         sorted_idx = np.argsort(self.x)
         self.x = self.x[sorted_idx]
         self.y = self.y[sorted_idx]
-        print("sorted", all(np.sort(self.x) == self.x))
 
 
 class PlotDataItem(GraphicsObject):
@@ -476,6 +477,13 @@ class PlotDataItem(GraphicsObject):
         clipToView          ``bool``, default ``False``
 
                             Clip the data to only the visible range on the x-axis.
+                            See :meth:`setClipToView` for more information.
+
+        sortValues          ``bool``, default ``False``
+
+                            Sort the internal copy of the data so `clipToView`
+                            works. This flag is not remebered: must be used again
+                            if `setData` is used.
                             See :meth:`setClipToView` for more information.
 
         dynamicRangeLimit   ``float``, default ``1e6``
@@ -1318,7 +1326,7 @@ class PlotDataItem(GraphicsObject):
         if xData is None or yData is None:
             self._dataset = None
         else:
-            self._dataset = PlotDataset( xData, yData )
+            self._dataset = PlotDataset(xData, yData, sortValues=kwargs.get("sortValues"))
         # invalidate mapped data , will be generated in getData() / _getDisplayDataset()
         self._datasetMapped  = None
         # invalidate display data, will be generated in getData() / _getDisplayDataset()
@@ -1466,6 +1474,7 @@ class PlotDataItem(GraphicsObject):
             return
         self._dataset.sortData()
         self._datasetDisplay = None  # invalidate display data
+        self._datasetMapped = None
         self.updateItems(styleUpdate=False)
 
     def _getDisplayDataset(self) -> PlotDataset | None:
